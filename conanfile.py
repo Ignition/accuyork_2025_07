@@ -2,8 +2,8 @@ from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMake, cmake_layout, CMakeDeps
 
 
-class helloRecipe(ConanFile):
-    name = "hello"
+class mandelbrotRecipe(ConanFile):
+    name = "mandelbrot"
     version = "0.1"
     package_type = "application"
 
@@ -25,8 +25,7 @@ class helloRecipe(ConanFile):
         self.test_requires("benchmark/[>=1.9]")
 
     def requirements(self):
-        pass
-        #self.requires("rocksdb/9.7.4")
+        self.requires("xsimd/13.2.0")
 
     def configure(self):
         pass
