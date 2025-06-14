@@ -1,4 +1,4 @@
-# Basic setup, to bring conan into the enviroment
+# Basic setup, to bring conan into the environment
 ./setup.sh
 source ./venv/bin/activate
 
@@ -8,11 +8,11 @@ source ./venv/bin/activate
 conan install . --build=missing -pr ./example_profile
 
 # Use preset that was generated to configure cmake
-cmake --preset conan-release
-# if you want look at build/Release/generators/CMakePresets.json to see what is being done for you
+cmake --preset conan-relwithdebinfo
+# if you want to look at build/RelWithDebInfo/generators/CMakePresets.json to see what is being done for you
 
 # Use the preset to do the cmake build
-cmake --build build --preset conan-release
+cmake --build build --preset conan-relwithdebinfo
 
 # We could do extra stuff like test/install, but for now just run the built binary
-./build/Release/hello
+./build/RelWithDebInfo/bench/bench --benchmark_min_time=1s

@@ -4,7 +4,7 @@
 
 namespace mandelbrot::v2 {
 
-template <typename T = double, std::size_t MAX_ITER = 10'000>
+template <std::size_t MAX_ITER = 10'000,typename T = double>
 [[nodiscard]] auto mandelbrot(std::complex<T> c) -> std::size_t {
   auto iter = std::size_t{};
 
