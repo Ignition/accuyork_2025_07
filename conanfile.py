@@ -21,15 +21,16 @@ class mandelbrotRecipe(ConanFile):
     exports_sources = "CMakeLists.txt", "src/*"
 
     def build_requirements(self):
-        self.test_requires("doctest/[>=2.4]")
+        #self.test_requires("doctest/[>=2.4]")
         self.test_requires("benchmark/[>=1.9]")
 
     def requirements(self):
         self.requires("xsimd/13.2.0")
+        self.requires("libdispatch/5.3.2")
+        self.requires("onetbb/2022.0.0")
 
     def configure(self):
         pass
-        #self.options["rocksdb"].with_zstd = True
 
     def layout(self):
         cmake_layout(self)

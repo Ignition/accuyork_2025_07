@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+    add_compile_options(-stdlib=libc++)
+    add_link_options(-stdlib=libc++)
+endif()
+
 add_library(mandelbrot INTERFACE)
 target_sources(mandelbrot
         INTERFACE
@@ -12,18 +17,31 @@ target_sources(mandelbrot
         include/mandelbrot/mandelbrot.hpp
         include/mandelbrot/v1.hpp
         include/mandelbrot/v2.hpp
+        include/mandelbrot/v3.hpp
+        include/mandelbrot/v4.hpp
+        include/mandelbrot/v5.hpp
+        include/mandelbrot/v6.hpp
+        include/mandelbrot/v7.hpp
+        include/mandelbrot/v8.hpp
 )
 
 target_include_directories(mandelbrot INTERFACE include)
+
+# dependency via conan
 find_package(xsimd REQUIRED)
-target_link_libraries(mandelbrot INTERFACE xsimd)
+find_package(libdispatch REQUIRED)
+find_package(TBB REQUIRED)
+
+# dependency via CPM
 include(cmake/CPM.cmake)
 CPMAddPackage(
         NAME stdexec
         GITHUB_REPOSITORY NVIDIA/stdexec
         GIT_TAG main
 )
-target_link_libraries(mandelbrot INTERFACE STDEXEC::stdexec)
+
+target_link_libraries(mandelbrot INTERFACE STDEXEC::stdexec xsimd libdispatch::libdispatch onetbb::onetbb)
+target_link_options(mandelbrot INTERFACE -fblocks)
 
 install(TARGETS mandelbrot DESTINATION "."
         RUNTIME DESTINATION bin
@@ -31,8 +49,8 @@ install(TARGETS mandelbrot DESTINATION "."
         LIBRARY DESTINATION lib
 )
 
-include(CTest)
-if (BUILD_TESTING)
-    add_subdirectory(test)
-endif ()
+#include(CTest)
+#if (BUILD_TESTING)
+#    add_subdirectory(test)
+#endif ()
 add_subdirectory(bench)
