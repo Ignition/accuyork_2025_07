@@ -1,0 +1,22 @@
+BreakBeforeBraces: Custom  # Optional: for brace style
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeWhile: false
+  SplitEmptyFunction: false
+  SplitEmptyNamespace: false
+  AfterFunction: false
+  AfterNamespace: false
+  BeforeLambdaBody: false
+AlignAfterOpenBracket: BlockIndent
+AllowAllArgumentsOnNextLine: false
+AllowAllConstructorInitializersOnNextLine: false
+BinPackArguments: false
+BinPackParameters: false
+AlignTrailingComments: true
+ColumnLimit: 80  # or whatever your preferred max line width is
+AllowShortLambdasOnASingleLine: All
+
+LambdaBodyIndentation: Signature

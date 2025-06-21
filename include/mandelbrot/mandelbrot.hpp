@@ -9,3 +9,6 @@
 
 // SIMD
 #include "mandelbrot/v6.hpp"
+
+// MT
+#include "mandelbrot/v7.hpp"

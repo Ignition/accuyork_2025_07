@@ -13,9 +13,17 @@ target_sources(mandelbrot
         include/mandelbrot/v1.hpp
         include/mandelbrot/v2.hpp
 )
+
 target_include_directories(mandelbrot INTERFACE include)
 find_package(xsimd REQUIRED)
 target_link_libraries(mandelbrot INTERFACE xsimd)
+include(cmake/CPM.cmake)
+CPMAddPackage(
+        NAME stdexec
+        GITHUB_REPOSITORY NVIDIA/stdexec
+        GIT_TAG main
+)
+target_link_libraries(mandelbrot INTERFACE STDEXEC::stdexec)
 
 install(TARGETS mandelbrot DESTINATION "."
         RUNTIME DESTINATION bin

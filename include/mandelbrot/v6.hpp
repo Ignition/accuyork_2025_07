@@ -5,10 +5,10 @@
 
 namespace mandelbrot::v6 {
 
-template <std::size_t MAX_ITER = 10'000,typename T = double>
-[[nodiscard]] auto mandelbrot(xsimd::batch<T> a, xsimd::batch<T> b)
+template <std::size_t MAX_ITER>
+[[nodiscard]] auto mandelbrot(xsimd::batch<double> a, xsimd::batch<double> b)
     -> xsimd::batch<int64_t> {
-  using batch = xsimd::batch<T>;
+  using batch = xsimd::batch<double>;
   using bsize = xsimd::batch<int64_t>;
 
   auto const four = batch(4.0);
