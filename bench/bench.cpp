@@ -3,9 +3,8 @@
 #include <complex>
 #include <format>
 
-#include <exec/libdispatch_queue.hpp>
-
-enum struct QUEUE_TYPE : uint8_t { LIB_DISPATCH, STANDARD };
+#include <exec/static_thread_pool.hpp>
+// #include <exec/libdispatch_queue.hpp>
 
 // Test cases with their expected iteration behavior
 struct TestPoint {
@@ -20,21 +19,18 @@ const TestPoint test_points[] = {
 };
 
 template <typename Func>
-static void BM_Mandelbrot(
-    benchmark::State &state, Func mandel_func, const std::complex<double> &point
-) {
+static void
+BM_Mandelbrot(benchmark::State &state, Func mandel_func, const std::complex<double> &point) {
   for (auto _ : state) {
     auto result = mandel_func(point);
     benchmark::DoNotOptimize(result);
   }
 
-  state.counters["calc"] =
-      benchmark::Counter(1, benchmark::Counter::kIsIterationInvariantRate);
+  state.counters["calc"] = benchmark::Counter(1, benchmark::Counter::kIsIterationInvariantRate);
 }
 
-static void BM_Mandelbrot_SIMD(
-    benchmark::State &state, auto mandel_func, const std::complex<double> &point
-) {
+static void
+BM_Mandelbrot_SIMD(benchmark::State &state, auto mandel_func, const std::complex<double> &point) {
   using batch = xsimd::batch<double>;
   constexpr auto N = batch::size;
 
@@ -46,11 +42,9 @@ static void BM_Mandelbrot_SIMD(
     benchmark::DoNotOptimize(result);
   }
 
-  state.counters["calc"] =
-      benchmark::Counter(N, benchmark::Counter::kIsIterationInvariantRate);
+  state.counters["calc"] = benchmark::Counter(N, benchmark::Counter::kIsIterationInvariantRate);
 }
 
-template <QUEUE_TYPE queue>
 static void BM_Mandelbrot_MT(
     benchmark::State &state,
     auto &&mandel_func,
@@ -64,45 +58,30 @@ static void BM_Mandelbrot_MT(
   auto gen = gen_maker(point);
 
   // 64KiB
-  //  using batch = xsimd::batch<size_t>;
-  //  auto ensure_over_alloc = (N + batch::size - 1) / batch::size *
-  //  batch::size;
-  auto vec = make_output_vec(N); // std::vector<size_t>(ensure_over_alloc);
+  auto vec = make_output_vec(N);
 
-  // One common thread pool for the whole benchmark
+  auto const core_count = 4u; // std::max(std::thread::hardware_concurrency(), 4u);
+  auto pool = exec::static_thread_pool{core_count};
+  auto scheduler = pool.get_scheduler();
 
-  if constexpr (QUEUE_TYPE::LIB_DISPATCH == queue) {
-    auto dispatch = exec::libdispatch_queue();
-    auto scheduler = dispatch.get_scheduler();
-
-    for (auto _ : state) {
-      vec = mandel_func(std::move(vec), gen, scheduler);
-      benchmark::ClobberMemory();
-      benchmark::DoNotOptimize(vec);
-    }
-  } else {
-    auto const core_count = std::max(std::thread::hardware_concurrency(), 4u);
-    auto pool = exec::static_thread_pool{core_count};
-    auto scheduler = pool.get_scheduler();
-
-    for (auto _ : state) {
-      vec = mandel_func(std::move(vec), gen, scheduler);
-      benchmark::ClobberMemory();
-      benchmark::DoNotOptimize(vec);
-    }
+  for (auto _ : state) {
+    const auto start = std::chrono::steady_clock::now();
+    vec = mandel_func(std::move(vec), gen, scheduler);
+    const auto end = std::chrono::steady_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    state.SetIterationTime(elapsed.count());
+    benchmark::ClobberMemory();
+    benchmark::DoNotOptimize(vec);
   }
 
-  state.counters["calc"] =
-      benchmark::Counter(N, benchmark::Counter::kIsIterationInvariantRate);
+  state.counters["calc"] = benchmark::Counter(N, benchmark::Counter::kIsIterationInvariantRate);
 }
 
 void register_scalar_benchmarks(const char *version_name, auto func) {
   for (const auto &point : test_points) {
     benchmark::RegisterBenchmark(
         std::format("BM_Mandelbrot_{}/{}", version_name, point.name),
-        [=](benchmark::State &state) {
-          BM_Mandelbrot(state, func, point.point);
-        }
+        [=](benchmark::State &state) { BM_Mandelbrot(state, func, point.point); }
     );
   }
 }
@@ -111,14 +90,11 @@ void register_simd_benchmarks(const char *version_name, auto func) {
   for (const auto &point : test_points) {
     benchmark::RegisterBenchmark(
         std::format("BM_Mandelbrot_{}/{}", version_name, point.name),
-        [=](benchmark::State &state) {
-          BM_Mandelbrot_SIMD(state, func, point.point);
-        }
+        [=](benchmark::State &state) { BM_Mandelbrot_SIMD(state, func, point.point); }
     );
   }
 }
 
-template <QUEUE_TYPE queue>
 void register_mt_benchmarks(
     const char *version_name, auto func, auto gen_maker, auto &&make_output_vec
 ) {
@@ -126,15 +102,9 @@ void register_mt_benchmarks(
     benchmark::RegisterBenchmark(
         std::format("BM_Mandelbrot_{}/{}", version_name, point.name),
         [=](benchmark::State &state) {
-          BM_Mandelbrot_MT<queue>(
-              state,
-              func,
-              point.point,
-              gen_maker,
-              make_output_vec
-          );
+          BM_Mandelbrot_MT(state, func, point.point, gen_maker, make_output_vec);
         }
-    );
+    )->UseManualTime();
   }
 }
 
@@ -144,41 +114,36 @@ int main(int argc, char **argv) {
   constexpr auto MAX_ITER = 10'000uz;
   auto const core_count = std::max(std::thread::hardware_concurrency(), 4u);
 
-  //  register_scalar_benchmarks("V1", [](std::complex<double> const &c) {
-  //    return mandelbrot::v1::mandelbrot<MAX_ITER>(c);
-  //  });
-  //
-  //  register_scalar_benchmarks("V2", [](std::complex<double> const &c) {
-  //    return mandelbrot::v2::mandelbrot<MAX_ITER>(c);
-  //  });
-  //
-  //  register_scalar_benchmarks("V3", [](std::complex<double> const &c) {
-  //    return mandelbrot::v3::mandelbrot<MAX_ITER>(c);
-  //  });
-  //
-  //  register_scalar_benchmarks("V4", [](std::complex<double> const &c) {
-  //    return mandelbrot::v4::mandelbrot<MAX_ITER>(c);
-  //  });
-  //
-  //  register_scalar_benchmarks("V5", [](std::complex<double> const &c) {
-  //    return mandelbrot::v5::mandelbrot<MAX_ITER>(c);
-  //  });
+  register_scalar_benchmarks("V1", [](std::complex<double> const &c) {
+    return mandelbrot::v1::mandelbrot<MAX_ITER>(c);
+  });
+
+  register_scalar_benchmarks("V2", [](std::complex<double> const &c) {
+    return mandelbrot::v2::mandelbrot<MAX_ITER>(c);
+  });
+
+  register_scalar_benchmarks("V3", [](std::complex<double> const &c) {
+    return mandelbrot::v3::mandelbrot<MAX_ITER>(c);
+  });
+
+  register_scalar_benchmarks("V4", [](std::complex<double> const &c) {
+    return mandelbrot::v4::mandelbrot<MAX_ITER>(c);
+  });
+
+  register_scalar_benchmarks("V5", [](std::complex<double> const &c) {
+    return mandelbrot::v5::mandelbrot<MAX_ITER>(c);
+  });
 
   // SIMD
-  register_simd_benchmarks(
-      "V6",
-      [](xsimd::batch<double> a, xsimd::batch<double> b) {
-        return mandelbrot::v6::mandelbrot<MAX_ITER>(a, b);
-      }
-  );
+  register_simd_benchmarks("SIMD", [](xsimd::batch<double> a, xsimd::batch<double> b) {
+    return mandelbrot::v6::mandelbrot<MAX_ITER>(a, b);
+  });
 
   // MT
   auto scalar_gen_maker = [](std::complex<double> const &point) {
     return [=](std::size_t) { return point; };
   };
-  auto scalar_make_output_vec = [](std::size_t N) {
-    return std::vector<std::size_t>(N);
-  };
+  auto scalar_make_output_vec = [](std::size_t N) { return std::vector<std::size_t>(N); };
 
   auto vector_gen_maker = [](std::complex<double> const &point) {
     return [=](std::size_t) {
@@ -191,15 +156,14 @@ int main(int argc, char **argv) {
   };
   auto vector_make_output_vec = [](std::size_t N) {
     using batch = xsimd::batch<size_t>;
+    // These will be aligned and will over allocate to make sure
+    // everything can be SIMD processed
     auto const N_plus = (N + batch::size - 1) / batch::size;
     return std::vector<batch>(N_plus);
   };
-//  auto vector_assign = [](xsimd::batch<size_t> & lhs, xsimd::batch<size_t> rhs) {
-//    lhs = rhs;
-//  };
 
-  register_mt_benchmarks<QUEUE_TYPE::STANDARD>(
-      "V7-new_pool",
+  register_mt_benchmarks(
+      "Multithreaded_Scalar_FreshThreadPool",
       [core_count](
           auto vec,
           auto &&gen,
@@ -207,65 +171,30 @@ int main(int argc, char **argv) {
       ) {
         // New thread pool per benchmark iteration
         auto pool = exec::static_thread_pool{core_count};
-        return mandelbrot::v7::mandelbrot<MAX_ITER>(
-            std::move(vec),
-            gen,
-            pool.get_scheduler()
-        );
+        return mandelbrot::v7::mandelbrot<MAX_ITER>(std::move(vec), gen, pool.get_scheduler());
       },
-      scalar_gen_maker,scalar_make_output_vec
+      scalar_gen_maker,
+      scalar_make_output_vec
   );
 
-  register_mt_benchmarks<QUEUE_TYPE::STANDARD>(
-      "V7-pool",
+  register_mt_benchmarks(
+      "Multithreaded_Scalar",
       [](auto vec, auto &&gen, auto scheduler) {
         // Reuse the same thread pool
-        return mandelbrot::v7::mandelbrot<MAX_ITER>(
-            std::move(vec),
-            gen,
-            scheduler
-        );
+        return mandelbrot::v7::mandelbrot<MAX_ITER>(std::move(vec), gen, scheduler);
       },
-      scalar_gen_maker,scalar_make_output_vec
+      scalar_gen_maker,
+      scalar_make_output_vec
   );
 
-  register_mt_benchmarks<QUEUE_TYPE::LIB_DISPATCH>(
-      "V7-dispatch",
+  register_mt_benchmarks(
+      "Multithreaded_SIMD",
       [](auto vec, auto &&gen, auto scheduler) {
         // Reuse the same thread pool
-        return mandelbrot::v7::mandelbrot<MAX_ITER>(
-            std::move(vec),
-            gen,
-            scheduler
-        );
+        return mandelbrot::v7::mandelbrot<MAX_ITER>(std::move(vec), gen, scheduler);
       },
-      scalar_gen_maker,scalar_make_output_vec
-  );
-
-  register_mt_benchmarks<QUEUE_TYPE::STANDARD>(
-      "V8-pool",
-      [](auto vec, auto &&gen, auto scheduler) {
-        // Reuse the same thread pool
-        return mandelbrot::v8::mandelbrot<MAX_ITER>(
-            std::move(vec),
-            gen,
-            scheduler
-        );
-      },
-      vector_gen_maker,vector_make_output_vec
-  );
-
-  register_mt_benchmarks<QUEUE_TYPE::LIB_DISPATCH>(
-      "V8-dispatch",
-      [](auto vec, auto &&gen, auto scheduler) {
-        // Reuse the same thread pool
-        return mandelbrot::v8::mandelbrot<MAX_ITER>(
-            std::move(vec),
-            gen,
-            scheduler
-        );
-      },
-      vector_gen_maker,vector_make_output_vec
+      vector_gen_maker,
+      vector_make_output_vec
   );
 
   benchmark::Initialize(&argc, argv);

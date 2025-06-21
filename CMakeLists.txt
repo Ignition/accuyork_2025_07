@@ -22,7 +22,7 @@ target_sources(mandelbrot
         include/mandelbrot/v5.hpp
         include/mandelbrot/v6.hpp
         include/mandelbrot/v7.hpp
-        include/mandelbrot/v8.hpp
+        include/mandelbrot/v7.hpp
 )
 
 target_include_directories(mandelbrot INTERFACE include)

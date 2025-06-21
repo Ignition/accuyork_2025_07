@@ -16,7 +16,7 @@ AllowAllConstructorInitializersOnNextLine: false
 BinPackArguments: false
 BinPackParameters: false
 AlignTrailingComments: true
-ColumnLimit: 80  # or whatever your preferred max line width is
+ColumnLimit: 100  # or whatever your preferred max line width is
 AllowShortLambdasOnASingleLine: All
 
 LambdaBodyIndentation: Signature
