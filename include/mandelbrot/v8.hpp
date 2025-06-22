@@ -16,7 +16,7 @@ constexpr auto mandelbrot_scalar = [](std::complex<double> c) -> std::size_t {
 
   auto x = 0.0;
   auto y = 0.0;
-  while (x * x + y * y <= 4.0 && iter < MAX_ITER) {
+  while (x * x + y * y <= 4.0 and iter < MAX_ITER) {
     auto x_next = x * x - y * y + a;
     auto y_next = 2 * x * y + b;
     std::tie(x, y) = std::tie(x_next, y_next);
@@ -45,7 +45,7 @@ constexpr auto mandelbrot_simd =
     auto const y2 = y * y;
 
     auto const mask = (x2 + y2) <= four;
-    if (i % 16 == 0 && none(mask)) {
+    if (i % 16 == 0 and none(mask)) {
       break;
     }
 

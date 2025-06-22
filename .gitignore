@@ -1,3 +1,7 @@
 /build/
 /CMakeUserPresets.json
 /venv/
+
+/compile_commands.json
+/perf.data
+/perf.data.old

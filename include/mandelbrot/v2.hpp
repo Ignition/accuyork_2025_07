@@ -9,7 +9,7 @@ template <std::size_t MAX_ITER>
   auto iter = std::size_t{};
 
   auto z = std::complex<double>{};
-  while (std::norm(z) <= 4.0 && iter < MAX_ITER) {
+  while (std::norm(z) <= 4.0 and iter < MAX_ITER) {
     z = z * z + c;
     ++iter;
   }

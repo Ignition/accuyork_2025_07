@@ -24,7 +24,7 @@ template <std::size_t MAX_ITER>
     auto const y2 = y * y;
 
     auto const mask = (x2 + y2) <= four;
-    if (i % 16 == 0 && none(mask)) {
+    if (i % 16 == 0 and none(mask)) {
       break;
     }
 
