@@ -391,17 +391,15 @@ auto mandelbrot(std::complex<double> c) -> std::size_t {
             \item Time to use Linux perf directly for detailed insights
         \end{itemize}
     \end{block}
-    % \begin{exampleblock}{Using perf for Analysis}
-%         \begin{minted}[fontsize=\footnotesize]{sh}
-% # Record with call graph and debug info
-% perf record -g --call-graph=dwarf ./bench \
-%     --benchmark_filter=BM_Mandelbrot_V4/0 \
-%     --benchmark_min_time=1s
-
-% # View annotated assembly with performance counters
-% perf annotate
-%         \end{minted}
-    % \end{exampleblock}
+    \begin{exampleblock}{Using perf assembly}
+        \texttt{\# Record with call graph and debug info}\\
+        \texttt{perf record -g --call-graph=dwarf ./bench \textbackslash}\\
+        \texttt{\hspace{2em}--benchmark\_filter=BM\_Mandelbrot\_V4/0 \textbackslash}\\
+        \texttt{\hspace{2em}--benchmark\_min\_time=1s}\\
+        \texttt{}\\
+        \texttt{\# View annotated assembly}\\
+        \texttt{perf annotate}
+    \end{exampleblock}
 \end{frame}
 
 
@@ -423,15 +421,13 @@ auto mandelbrot(std::complex<double> c) -> std::size_t {
     \end{columns}
 \end{frame}
 
-
-
 \begin{frame}{Assembly Comparison}
     \begin{block}{Key Observations}
         \begin{itemize}
             \item Manual reuse can still be a beneficial optimization
             \begin{itemize}
                 \item No abstraction: 4x moves, 5x multiplications, 6x add/subs
-                \item Compute reuse: 4x moves, 3x multiplications, 6x add/subs
+                \item Computation reuse: 4x moves, 3x multiplications, 6x add/subs
             \end{itemize}
             \item 2 fewer multiplications per iteration with reuse
             \item Manual optimization beneficial despite compiler optimizations
@@ -439,26 +435,127 @@ auto mandelbrot(std::complex<double> c) -> std::size_t {
     \end{block}
 \end{frame}
 
-\begin{frame}[fragile]{Manual Complex Arithmetic}
-    \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \begin{block}{Update Rule}
-                $z_{n+1} = z_n^2 + c$ becomes:
-                \begin{align*}
-                    x_{n+1} &= x_n^2 - y_n^2 + a \\
-                    y_{n+1} &= 2x_ny_n + b
-                \end{align*}
-            \end{block}
-        \end{column}
-        \begin{column}{0.5\textwidth}
+\begin{frame}{Modern x86\_64 Microarchitecture Levels}
+    \begin{block}{Our Current Code: Using x86\_64-v1 Instructions}
+        \begin{itemize}
+            \item Using \texttt{mulsd} (Multiply Scalar Double)
+            \item Part of SSE2 (Streaming SIMD Extensions 2)
+            \item Operates on just 2 registers at a time
+        \end{itemize}
+    \end{block}
+
+    \begin{block}{x86\_64 Microarchitecture Levels}
+        \begin{description}
+            \item[x86\_64-v2] POPCNT, CMPXCHG16B
             \begin{itemize}
-                \item Removed \texttt{std::complex} overhead
-                \item Manual computation of real/imaginary parts
-                \item Better performance through direct control
+                \item Common since ~2011 (Nehalem/Bulldozer)
             \end{itemize}
+            
+            \item[x86\_64-v3] AVX, AVX2, BMI1/2, FMA, LZCNT
+            \begin{itemize}
+                \item Common since ~2015 (Haswell/Excavator)
+            \end{itemize}
+        \end{description}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Modern Compiler Targeting}
+    \begin{block}{CMake Configuration}
+        \texttt{target\_compile\_options(}\\
+        \texttt{    bench PRIVATE -march=x86-64-v3 -mtune=native}\\
+        \texttt{)}\\
+    \end{block}
+
+    \begin{block}{Why Target x86\_64-v3?}
+        \begin{itemize}
+            \item Realistic for today's deployments
+            \item Enables vectorized operations (AVX/AVX2)
+            \item Modern math instructions (FMA)
+            \item Bit manipulation (BMI1/2)
+            \item Better bit operations (LZCNT)
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Assembly Comparison x86\_64-v3}
+    \begin{columns}
+        \begin{column}{0.45\textwidth}
+            \centering
+            \includegraphics[width=0.9\textwidth,height=0.8\textheight,keepaspectratio]{images/V4_assembly_v3.png}
+            \\
+            \footnotesize No Abstraction
+        \end{column}
+        \hfill
+        \begin{column}{0.45\textwidth}
+            \centering
+            \includegraphics[width=0.9\textwidth,height=0.8\textheight,keepaspectratio]{images/V5_assembly_v3.png}
+            \\
+            \footnotesize Computation Reuse
         \end{column}
     \end{columns}
 \end{frame}
+
+\begin{frame}{Assembly Comparison x86\_64-v3}
+    \begin{block}{Key Observations}
+        \begin{itemize}
+            \item Now the simpler code is faster, our computation reuse now hinders codegen
+            \begin{itemize}
+                \item No abstraction: 1x move, 2x multiplications, 3x add/subs 3x fma
+                \item Computation reuse: 1x move, 2x multiplications, 5x add/subs, 1x fma
+            \end{itemize}
+            \item Not obvious why the simpler code is faster
+            \item Sometimes KISS (keep it simple \& straightforward) is better
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+\begin{frame}{Pipeline Analysis with LLVM-MCA}
+    \begin{block}{What is LLVM-MCA?}
+        \begin{itemize}
+            \item A performance analysis tool that simulates CPU pipeline behavior
+            \item Models out-of-order execution, register renaming, and instruction scheduling
+            \item Helps identify pipeline stalls, port pressure, and bottlenecks
+        \end{itemize}
+    \end{block}
+    
+    \begin{exampleblock}{Why Use It?}
+        \begin{itemize}
+            \item Evidence driven approach to understand non-obvious performance differences
+            \item Identifies resource contention and dependencies
+            \item Helps understand the impact of instruction scheduling
+            \item Particularly useful for analyzing microarchitecture-specific behavior
+        \end{itemize}
+    \end{exampleblock}
+\end{frame}
+
+\begin{frame}{LLVM-MCA Analysis}
+    \begin{block}{Commands Used}
+        \texttt{clang++-20 mandelbrot.cpp -std=c++23 -O3 -S -o - | llvm-mca-20 -mcpu=haswell}\\
+    \end{block}
+\end{frame}
+
+\begin{frame}{LLVM-MCA Analysis}    
+    \begin{block}{Results Comparison}
+        \begin{tabular}{lrr}
+            \textbf{Metric} & \textbf{No Abstraction} & \textbf{Computation Reuse} \\
+            \hline
+            Iterations & 100 & 100 \\
+            Instructions & 1,900 & 2,100 \\
+            Total Cycles & 572 & 621 \\
+            Total uOps & 2,100 & 2,300 \\
+            \hline
+            uOps/Cycle & 3.67 & 3.70 \\
+            IPC & 3.32 & 3.38 \\
+            \textbf{Block RThroughput} & \textbf{5.3} & \textbf{5.8} \\
+        \end{tabular}
+    \end{block}
+    
+    \begin{alertblock}{Key Insight}
+        The no-abstraction version has better (lower) Block RThroughput (5.3 vs 5.8), meaning it has better port scheduling and hence hides its latency better.
+    \end{alertblock}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
 
 \begin{frame}{SIMD Optimization}
     \begin{block}{Vectorization Approach}

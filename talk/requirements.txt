@@ -1,0 +1,3 @@
+# Python dependencies for minted LaTeX package
+pygments>=2.19.2
+packaging>=21.0  # For version comparison

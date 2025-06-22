@@ -29,8 +29,8 @@ target_include_directories(mandelbrot INTERFACE include)
 
 # dependency via conan
 find_package(xsimd REQUIRED)
-find_package(libdispatch REQUIRED)
-find_package(TBB REQUIRED)
+#find_package(libdispatch REQUIRED)
+#find_package(TBB REQUIRED)
 
 # dependency via CPM
 include(cmake/CPM.cmake)
@@ -40,7 +40,8 @@ CPMAddPackage(
         GIT_TAG main
 )
 
-target_link_libraries(mandelbrot INTERFACE STDEXEC::stdexec xsimd libdispatch::libdispatch onetbb::onetbb)
+target_link_libraries(mandelbrot INTERFACE STDEXEC::stdexec xsimd)
+#target_link_libraries(mandelbrot INTERFACE libdispatch::libdispatch onetbb::onetbb)
 target_link_options(mandelbrot INTERFACE -fblocks)
 
 install(TARGETS mandelbrot DESTINATION "."
