@@ -18,5 +18,6 @@ BinPackParameters: false
 AlignTrailingComments: true
 ColumnLimit: 100  # or whatever your preferred max line width is
 AllowShortLambdasOnASingleLine: All
-
 LambdaBodyIndentation: Signature
+BreakTemplateDeclarations: Yes
+AllowShortCompoundRequirementOnASingleLine: true

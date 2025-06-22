@@ -1,34 +1,12 @@
 #pragma once
 
-#include <cstddef>
-#include <stdexec/execution.hpp>
 #include <xsimd/xsimd.hpp>
 
 namespace mandelbrot::v7 {
 
-namespace {
-
 template <std::size_t MAX_ITER>
-constexpr auto mandelbrot_scalar = [](std::complex<double> c) -> std::size_t {
-  auto const a = c.real();
-  auto const b = c.imag();
-
-  auto iter = std::size_t{};
-
-  auto x = 0.0;
-  auto y = 0.0;
-  while (x * x + y * y <= 4.0 && iter < MAX_ITER) {
-    auto x_next = x * x - y * y + a;
-    auto y_next = 2 * x * y + b;
-    std::tie(x, y) = std::tie(x_next, y_next);
-    ++iter;
-  }
-  return iter;
-};
-
-template <std::size_t MAX_ITER>
-constexpr auto mandelbrot_simd =
-    [](xsimd::batch<double> a, xsimd::batch<double> b) -> xsimd::batch<std::size_t> {
+[[nodiscard]] auto mandelbrot(xsimd::batch<double> a, xsimd::batch<double> b)
+    -> xsimd::batch<std::size_t> {
   using batch = xsimd::batch<double>;
   using bsize = xsimd::batch<std::size_t>;
 
@@ -40,12 +18,13 @@ constexpr auto mandelbrot_simd =
   auto y = batch(0.0);
   auto iter = bsize(0);
 
+#pragma clang loop unroll_count(16)
   for (std::size_t i = 0; i < MAX_ITER; ++i) {
     auto const x2 = x * x;
     auto const y2 = y * y;
 
     auto const mask = (x2 + y2) <= four;
-    if (none(mask)) {
+    if (i % 16 == 0 && none(mask)) {
       break;
     }
 
@@ -59,30 +38,6 @@ constexpr auto mandelbrot_simd =
   }
 
   return iter;
-};
-} // namespace
-
-template <std::size_t MAX_ITER> auto mandelbrot(auto vec, auto &&gen, auto scheduler) -> auto {
-
-  constexpr bool is_scalar = std::is_same_v<typename decltype(vec)::value_type, std::size_t>;
-
-  auto sender = stdexec::bulk_chunked(
-      stdexec::schedule(scheduler),
-      stdexec::par,
-      vec.size(),
-      [&](std::size_t begin, std::size_t end) {
-        for (auto i = begin; i != end; ++i) {
-          if constexpr (is_scalar) {
-            vec[i] = mandelbrot_scalar<MAX_ITER>(gen(i));
-          } else {
-            vec[i] = std::apply(mandelbrot_simd<MAX_ITER>, gen(i));
-          }
-        }
-      }
-  );
-
-  stdexec::sync_wait(std::move(sender));
-  return vec;
 }
 
 } // namespace mandelbrot::v7

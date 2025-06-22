@@ -1,15 +1,14 @@
 #pragma once
 
-#include <cstddef>
 #include <xsimd/xsimd.hpp>
 
 namespace mandelbrot::v6 {
 
 template <std::size_t MAX_ITER>
 [[nodiscard]] auto mandelbrot(xsimd::batch<double> a, xsimd::batch<double> b)
-    -> xsimd::batch<int64_t> {
+    -> xsimd::batch<std::size_t> {
   using batch = xsimd::batch<double>;
-  using bsize = xsimd::batch<int64_t>;
+  using bsize = xsimd::batch<std::size_t>;
 
   auto const four = batch(4.0);
   auto const two = batch(2.0);
@@ -29,7 +28,7 @@ template <std::size_t MAX_ITER>
     }
 
     auto const xy = x * y;
-    auto const mask_i = batch_bool_cast<int64_t>(mask);
+    auto const mask_i = batch_bool_cast<std::size_t>(mask);
 
     // Only update where still running
     x = select(mask, x2 - y2 + a, x);
