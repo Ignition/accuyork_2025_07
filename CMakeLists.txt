@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.31)
-project(demo LANGUAGES CXX)
+project(mandelbrot LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
-    add_compile_options(-stdlib=libc++)
-    add_link_options(-stdlib=libc++)
-endif()
+# if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "AppleClang")
+#     add_compile_options(-stdlib=libc++)
+#     add_link_options(-stdlib=libc++)
+# endif()
 
 add_library(mandelbrot INTERFACE)
 target_sources(mandelbrot
@@ -29,8 +29,9 @@ target_include_directories(mandelbrot INTERFACE include)
 
 # dependency via conan
 find_package(xsimd REQUIRED)
-find_package(libdispatch REQUIRED)
-find_package(TBB REQUIRED)
+find_package(SFML REQUIRED)
+#find_package(libdispatch REQUIRED)
+#find_package(TBB REQUIRED)
 
 # dependency via CPM
 include(cmake/CPM.cmake)
@@ -40,7 +41,8 @@ CPMAddPackage(
         GIT_TAG main
 )
 
-target_link_libraries(mandelbrot INTERFACE STDEXEC::stdexec xsimd libdispatch::libdispatch onetbb::onetbb)
+target_link_libraries(mandelbrot INTERFACE STDEXEC::stdexec xsimd)
+#target_link_libraries(mandelbrot INTERFACE libdispatch::libdispatch onetbb::onetbb)
 target_link_options(mandelbrot INTERFACE -fblocks)
 
 install(TARGETS mandelbrot DESTINATION "."
@@ -54,3 +56,5 @@ install(TARGETS mandelbrot DESTINATION "."
 #    add_subdirectory(test)
 #endif ()
 add_subdirectory(bench)
+add_subdirectory(viewer)
+

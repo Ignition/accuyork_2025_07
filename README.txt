@@ -12,7 +12,7 @@ cmake --preset conan-relwithdebinfo
 # if you want to look at build/RelWithDebInfo/generators/CMakePresets.json to see what is being done for you
 
 # Use the preset to do the cmake build
-cmake --build build --preset conan-relwithdebinfo
+cmake --build --preset conan-relwithdebinfo
 
 # We could do extra stuff like test/install, but for now just run the built binary
 ./build/RelWithDebInfo/bench/bench --benchmark_min_time=1s

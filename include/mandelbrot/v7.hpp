@@ -24,16 +24,16 @@ template <std::size_t MAX_ITER>
     auto const y2 = y * y;
 
     auto const mask = (x2 + y2) <= four;
-    if (i % 16 == 0 && none(mask)) {
+    if (i % 16 == 0 and none(mask)) {
       break;
     }
 
     auto const xy = x * y;
     auto const mask_i = batch_bool_cast<std::size_t>(mask);
 
+    x = x2 - y2 + a;
+    y = fma(two, xy, b);
     // Only update where still running
-    x = select(mask, x2 - y2 + a, x);
-    y = select(mask, fma(two, xy, b), y);
     iter = select(mask_i, iter + one, iter);
   }
 

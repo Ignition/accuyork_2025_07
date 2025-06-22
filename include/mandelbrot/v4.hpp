@@ -14,7 +14,7 @@ template <std::size_t MAX_ITER>
 
   auto x = 0.0;
   auto y = 0.0;
-  while (x * x + y * y <= 4.0 && iter < MAX_ITER) {
+  while (x * x + y * y <= 4.0 and iter < MAX_ITER) {
     auto x_next = x * x - y * y + a;
     auto y_next = 2 * x * y + b;
     std::tie(x, y) = std::tie(x_next, y_next);

@@ -15,7 +15,7 @@ template <std::size_t MAX_ITER>
   };
 
   auto z = std::complex<double>{};
-  while (not_escaped(z) && iter < MAX_ITER) {
+  while (not_escaped(z) and iter < MAX_ITER) {
     z = z * z + c;
     ++iter;
   }

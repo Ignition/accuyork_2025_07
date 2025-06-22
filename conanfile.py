@@ -26,8 +26,12 @@ class mandelbrotRecipe(ConanFile):
 
     def requirements(self):
         self.requires("xsimd/13.2.0")
-        self.requires("libdispatch/5.3.2")
-        self.requires("onetbb/2022.0.0")
+        #self.requires("libdispatch/5.3.2")
+        #self.requires("onetbb/2022.0.0")
+        self.requires("sfml/2.6.1", options={
+            "network": False,
+            "audio": False,
+        })
 
     def configure(self):
         pass

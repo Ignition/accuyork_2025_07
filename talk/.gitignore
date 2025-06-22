@@ -1,0 +1,46 @@
+# LaTeX auxiliary files
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.out
+*.run.xml
+*.snm
+*.synctex.gz
+*.toc
+*.pdf
+*.vrb
+
+# Build directory
+build/
+
+# PDF output (uncomment if you don't want to track the generated PDF)
+# *.pdf
+
+# Editor temporary files
+*~
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+
+# Logs and databases
+*.sql
+*.sqlite
+
+# Local development files
+*.local
